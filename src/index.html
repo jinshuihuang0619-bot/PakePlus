@@ -1,0 +1,1257 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GB/T 32960.3-2025 电动汽车远程监控协议解析工具</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 2px solid #e94560;
+}
+.header h1 { font-size: 1.3em; color: #fff; white-space: nowrap; }
+.header .ver { font-size: 0.7em; color: #e94560; background: #1a1a2e; padding: 2px 8px; border-radius: 10px; }
+.container { display:flex; height:calc(100vh - 64px); }
+.left-panel {
+  width: 42%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #333;
+}
+.right-panel {
+  width: 58%;
+  overflow-y: auto;
+  padding: 12px;
+}
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #16213e;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 6px 14px;
+  border: 1px solid #444;
+  background: #0f3460;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn:hover { background: #1a4a7a; border-color: #e94560; }
+.btn.primary { background: #e94560; border-color: #e94560; color: #fff; }
+.btn.primary:hover { background: #c73e54; }
+textarea {
+  flex: 1;
+  background: #0d1117;
+  color: #58a6ff;
+  border: none;
+  padding: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85em;
+  resize: none;
+  outline: none;
+  line-height: 1.5;
+}
+.stats-bar {
+  padding: 6px 16px;
+  background: #111;
+  font-size: 0.78em;
+  color: #888;
+  border-top: 1px solid #333;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.stats-bar span { white-space: nowrap; }
+.stats-bar .val { color: #58a6ff; font-weight: bold; }
+.stats-bar .ok { color: #3fb950; }
+.stats-bar .err { color: #e94560; }
+.msg-card {
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.msg-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  background: #0f3460;
+  cursor: pointer;
+  gap: 10px;
+}
+.msg-header:hover { background: #1a4a7a; }
+.msg-header .cmd-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #fff;
+  white-space: nowrap;
+}
+.cmd-badge.login { background: #8b4513; }
+.cmd-badge.realtime { background: #238636; }
+.cmd-badge.reissue { background: #9e6a03; }
+.msg-header .vin { color: #58a6ff; font-family: monospace; }
+.msg-header .arrow { margin-left: auto; color: #888; transition: transform 0.3s; }
+.msg-header .arrow.open { transform: rotate(90deg); }
+.msg-body { display: none; }
+.msg-body.open { display: block; }
+.frame-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82em;
+}
+.frame-table td {
+  padding: 5px 12px;
+  border-bottom: 1px solid #222;
+}
+.frame-table .lbl { color: #888; width: 110px; white-space: nowrap; }
+.frame-table .val { color: #58a6ff; font-family: monospace; word-break: break-all; }
+.section-title {
+  padding: 8px 14px;
+  background: #0d1117;
+  color: #e94560;
+  font-weight: bold;
+  font-size: 0.85em;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-title:hover { background: #111; }
+.section-title .toggle { font-family: monospace; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8em;
+  display: none;
+}
+.data-table.open { display: table; }
+.data-table th {
+  text-align: left;
+  padding: 5px 12px;
+  background: #0d1117;
+  color: #888;
+  font-weight: normal;
+  border-bottom: 1px solid #333;
+}
+.data-table td {
+  padding: 4px 12px;
+  border-bottom: 1px solid #1a1a2e;
+  font-family: monospace;
+}
+.data-table tr:hover td { background: #1a2a3e; }
+.data-table .field-name { color: #d2a8ff; }
+.data-table .field-val { color: #58a6ff; }
+.data-table .field-unit { color: #888; }
+	.data-table .field-hex { color: #666; font-size: 0.82em; letter-spacing: 0.5px; }
+.type-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.75em;
+  margin-right: 4px;
+}
+.type-0x01{background:#1a3a6e;color:#58a6ff}
+.type-0x02{background:#1a4e1a;color:#3fb950}
+.type-0x03{background:#4e1a4e;color:#d2a8ff}
+.type-0x04{background:#4e3a1a;color:#ffa657}
+.type-0x05{background:#1a4e4e;color:#39d353}
+.type-0x06{background:#4e1a1a;color:#e94560}
+.type-0x07{background:#3a1a4e;color:#bc8cff}
+.type-0x08{background:#1a4e3a;color:#56d364}
+.type-0x30{background:#4e2a1a;color:#d29922}
+.type-0x31{background:#1a2a4e;color:#79c0ff}
+.type-0x32{background:#3a4e1a;color:#7ee787}
+.type-0xFF{background:#333;color:#ccc}
+.alert-lv0{color:#888}
+.alert-lv1{color:#d29922}
+.alert-lv2{color:#ff7b72}
+.alert-lv3{color:#e94560}
+.alert-lv4{color:#ff2020}
+.tab-bar { display: flex; gap: 0; margin-bottom: 12px; }
+.tab-btn {
+  padding: 6px 16px;
+  background: transparent;
+  color: #888;
+  border: 1px solid #333;
+  cursor: pointer;
+  font-size: 0.82em;
+}
+.tab-btn.active { background: #0f3460; color: #e0e0e0; border-color: #e94560; }
+.tab-btn:first-child { border-radius: 4px 0 0 4px; }
+.tab-btn:last-child { border-radius: 0 4px 4px 0; }
+.error-msg { color: #e94560; background: #2d1b1b; padding: 10px 14px; border-radius: 4px; margin: 8px 0; font-size: 0.82em; }
+.success-msg { color: #3fb950; background: #1b2d1b; padding: 10px 14px; border-radius: 4px; margin: 8px 0; font-size: 0.82em; }
+.export-menu { position: relative; display: inline-block; }
+.export-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  z-index: 10;
+  min-width: 140px;
+}
+.export-menu:hover .export-dropdown { display: block; }
+.export-dropdown a {
+  display: block;
+  padding: 6px 12px;
+  color: #e0e0e0;
+  text-decoration: none;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+.export-dropdown a:hover { background: #0f3460; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>GB/T 32960.3 协议解析工具</h1>
+  <span class="ver">2025</span>
+  <span style="font-size:0.7em;color:#888;">电动汽车远程服务与管理系统 — 数据包解析上位机</span>
+</div>
+
+<div class="container">
+  <div class="left-panel">
+    <div class="toolbar">
+      <button class="btn primary" onclick="parseAll()">解析数据</button>
+      <button class="btn" onclick="clearAll()">清空</button>
+      <div class="export-menu">
+        <button class="btn">导出</button>
+        <div class="export-dropdown">
+          <a onclick="exportJSON()">导出 JSON</a>
+          <a onclick="exportCSV()">导出 CSV</a>
+          <a onclick="copyResult()">复制结果</a>
+        </div>
+      </div>
+    </div>
+    <textarea id="hexInput" placeholder="在此粘贴十六进制数据包...
+支持格式:
+  242402fe54455354333239363030...
+  24 24 02 FE 54 45 53 54...
+  0x24 0x24 0x02 0xFE...
+
+自动过滤空格、换行和 0x 前缀"></textarea>
+    <div class="stats-bar" id="statsBar">
+      <span>字符数: <span class="val" id="charCount">0</span></span>
+      <span>字节数: <span class="val" id="byteCount">0</span></span>
+      <span>解析状态: <span class="val" id="parseStatus">等待输入</span></span>
+    </div>
+  </div>
+  <div class="right-panel" id="rightPanel">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('parsed', this)">解析结果</button>
+      <button class="tab-btn" onclick="switchTab('raw', this)">原始数据</button>
+    </div>
+    <div id="tabParsed">
+      <div style="color:#666;text-align:center;padding:60px;font-size:0.9em;">
+        输入十六进制数据并点击"解析数据"查看结果
+      </div>
+    </div>
+    <div id="tabRaw" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, url, line, col, err) {
+  var el = document.getElementById('parseStatus');
+  if (el) { el.textContent = 'JS错误: '+msg+' (行'+line+')'; el.className = 'val err'; }
+  return false;
+};
+// Polyfill for older browsers
+if (!String.prototype.padStart) {
+  String.prototype.padStart = function(len, chr) {
+    var s = this;
+    while (s.length < len) s = (chr||' ')+s;
+    return s;
+  };
+}
+
+// ===== Protocol Constants =====
+var START_MARKER = 0x24;
+var FRAME_MIN_LEN = 25;
+
+var CMD_NAMES = {
+  0x01: '车辆登入',
+  0x02: '实时信息上报',
+  0x03: '补发信息上报',
+  0x04: '车辆登出',
+  0x05: '平台登入',
+  0x06: '平台登出',
+  0x09: '激活信息',
+  0x0A: '激活结果应答',
+  0x0B: '数据单元加密密钥交换'
+};
+
+var CMD_BADGE_CLASS = {
+  0x01: 'login',
+  0x02: 'realtime',
+  0x03: 'reissue',
+  0x09: 'login',
+  0x0A: 'login',
+};
+
+var RESP_FLAGS = {
+  0x01: '成功',
+  0x02: '错误',
+  0x03: 'VIN重复',
+  0xFE: '命令'
+};
+
+var CRYPT_NAMES = {
+  0x01: '未加密',
+  0x02: 'RSA加密',
+  0x03: 'AES128加密',
+  0xFE: '异常',
+  0xFF: '无效'
+};
+
+var INFO_TYPES = {
+  0x01: '整车数据',
+  0x02: '驱动电机数据',
+  0x03: '燃料电池发动机及车载氢系统数据',
+  0x04: '发动机数据',
+  0x05: '车辆位置数据',
+  0x06: '故障报警数据',
+  0x07: '动力蓄电池最小并联单元电压数据',
+  0x08: '动力蓄电池温度数据',
+  0x30: '燃料电池堆数据',
+  0x31: '超级电容数据',
+  0x32: '超级电容器极值数据',
+  0xFF: '签名数据'
+};
+
+
+var parseResults = [];
+var currentTab = 'parsed';
+
+// ===== Helpers =====
+function g(id) { return document.getElementById(id); }
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  var btns = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+  btn.classList.add('active');
+  g('tabParsed').style.display = tab === 'parsed' ? 'block' : 'none';
+  g('tabRaw').style.display = tab === 'raw' ? 'block' : 'none';
+}
+
+function updateStats() {
+  var raw = g('hexInput').value;
+  var hex = cleanHex(raw);
+  g('charCount').textContent = raw.length;
+  g('byteCount').textContent = Math.floor(hex.length / 2);
+}
+
+function setStatus(msg, cls) {
+  var el = g('parseStatus');
+  el.textContent = msg;
+  el.className = 'val ' + (cls || '');
+}
+
+// ===== Hex Utilities =====
+function cleanHex(str) {
+  return str.replace(/\s+/g, '').replace(/0x/gi, '').replace(/[^0-9a-fA-F]/g, '');
+}
+
+function hexToBytes(hex) {
+  var bytes = [];
+  for (var i = 0; i < hex.length - 1; i += 2) {
+    bytes.push(parseInt(hex.substr(i, 2), 16));
+  }
+  return bytes;
+}
+
+function bytesToHex(bytes, sep) {
+  var r = [];
+  for (var i = 0; i < bytes.length; i++) {
+    r.push((bytes[i] < 16 ? '0' : '') + bytes[i].toString(16).toUpperCase());
+  }
+  return r.join(sep || '');
+}
+
+function readWord(bytes, offset, bigEndian) {
+  if (bigEndian) return (bytes[offset] << 8) | bytes[offset + 1];
+  return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function readDWord(bytes, offset, bigEndian) {
+  if (bigEndian) return (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+  return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24);
+}
+
+function getTimeStr(bytes, offset) {
+  return (2000 + bytes[offset]) + '-' +
+    pad2(bytes[offset+1]) + '-' +
+    pad2(bytes[offset+2]) + ' ' +
+    pad2(bytes[offset+3]) + ':' +
+    pad2(bytes[offset+4]) + ':' +
+    pad2(bytes[offset+5]);
+}
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+function statusDesc(val, map) {
+  var key = '0x' + val.toString(16).padStart(2, '0').toUpperCase();
+  if (map[key]) return map[key];
+  if (val === 0xFE || val === 254) return '异常';
+  if (val === 0xFF || val === 255) return '无效';
+  return '';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function hexBytes(bytes, offset, len) {
+  var h = '';
+  for (var i = 0; i < len; i++) {
+    h += (bytes[offset+i] < 16 ? '0' : '') + bytes[offset+i].toString(16).toUpperCase() + ' ';
+  }
+  return h.trim();
+}
+
+function hx(v, len) {
+  var s = v.toString(16).toUpperCase();
+  while (s.length < len * 2) s = '0' + s;
+  var r = '';
+  for (var i = 0; i < s.length; i += 2) r += s.substr(i, 2) + ' ';
+  return r.trim();
+}
+
+// ===== Data Parsers =====
+
+function parseVehicleData(bytes, offset) {
+  var items = [];
+  var v, o = offset;
+
+  v = bytes[o];
+  items.push({name:'车辆状态', value:hex8(v), hex:hx(v,1), desc: statusDesc(v,{'0x01':'车辆启动','0x02':'车辆熄火','0x03':'其他'})}); o++;
+
+  v = bytes[o];
+  items.push({name:'充电状态', value:hex8(v), hex:hx(v,1), desc: statusDesc(v,{'0x01':'停车充电','0x02':'行驶充电','0x03':'未充电','0x04':'充电完成'})}); o++;
+
+  v = bytes[o];
+  items.push({name:'运行模式', value:hex8(v), hex:hx(v,1), desc: statusDesc(v,{'0x01':'纯电模式','0x02':'混动模式','0x03':'燃油模式'})}); o++;
+
+  v = readWord(bytes, o, true);
+  items.push({name:'车速', value:v, unit:'km/h', hex:hx(v,2), desc: v===0xFFFE?'异常':v===0xFFFF?'无效':(v/10).toFixed(1)}); o+=2;
+
+  v = readDWord(bytes, o, true);
+  items.push({name:'累计里程', value:v, unit:'km', hex:hx(v,4), desc: v===0xFFFFFFFE?'异常':v===0xFFFFFFFF?'无效':(v/10).toFixed(1)}); o+=4;
+
+  v = readWord(bytes, o, true);
+  items.push({name:'总电压', value:v, unit:'V', hex:hx(v,2), desc: v===0xFFFE?'异常':v===0xFFFF?'无效':String(v)}); o+=2;
+
+  var curr = readWord(bytes, o, true); o+=2;
+  var currDesc = curr===0xFFFE?'异常':curr===0xFFFF?'无效':((curr-10000)/10).toFixed(1)+'A ('+(curr>10000?'放电':curr<10000?'充电':'零')+')';
+  items.push({name:'总电流', value:curr, unit:'A', hex:hx(curr,2), desc:currDesc});
+
+  v = bytes[o];
+  items.push({name:'SOC', value:v, unit:'%', hex:hx(v,1), desc: v===0xFE?'异常':v===0xFF?'无效':v+'%'}); o++;
+
+  v = bytes[o];
+  items.push({name:'DC-DC状态', value:hex8(v), hex:hx(v,1), desc: statusDesc(v,{'0x01':'工作','0x02':'断开'})}); o++;
+
+  v = bytes[o];
+  items.push({name:'挡位', value:hex8(v), hex:hx(v,1), desc: statusDesc(v,{'0x01':'P挡','0x02':'R挡','0x03':'N挡','0x04':'D挡'})}); o++;
+
+  v = readWord(bytes, o, true);
+  items.push({name:'绝缘电阻', value:v, unit:'kΩ', hex:hx(v,2), desc: v===0xFFFE?'异常':v===0xFFFF?'无效':v+'kΩ'});
+  
+  return {items:items, nextOffset:offset+18};
+}
+function parseMotorData(bytes, offset) {
+  var items = [];
+  var count = bytes[offset];
+  items.push({name:'驱动电机个数', value:count, hex:hx(count,1)});
+  var pos = offset + 1;
+  for (var i = 0; i < count && pos + 10 <= bytes.length; i++) {
+    var motorItems = [];
+    var sn = bytes[pos]; motorItems.push({name:'序号', value:sn, hex:hx(sn,1)}); pos++;
+    var st = bytes[pos]; motorItems.push({name:'状态', value:hex8(st), hex:hx(st,1), desc: statusDesc(st,{'0x01':'耗电','0x02':'发电','0x03':'关闭','0x04':'准备'})}); pos++;
+    var ct = bytes[pos]; motorItems.push({name:'控制器温度', value:ct, unit:'℃', hex:hx(ct,1), desc: ct<=0xFA ? (ct-40)+'℃' : '无效'}); pos++;
+    var rpm = readWord(bytes, pos, true); motorItems.push({name:'转速', value:rpm, unit:'r/min', hex:hx(rpm,2), desc: rpm<=0xFFFD ? (rpm-30000)+'r/min' : '无效'}); pos+=2;
+    var tq = readDWord(bytes, pos, true); motorItems.push({name:'转矩', value:tq, unit:'N·m', hex:hx(tq,4), desc: tq<=0xFFFD ? ((tq-200000)/10).toFixed(1)+'N·m' : '无效'}); pos+=4;
+    var mt = bytes[pos]; motorItems.push({name:'电机温度', value:mt, unit:'℃', hex:hx(mt,1), desc: mt<=0xFA ? (mt-40)+'℃' : '无效'}); pos++;
+    items.push({name:'驱动电机 #'+sn, subItems:motorItems});
+  }
+  return {items:items, nextOffset:pos};
+}
+function parseFuelCellData(bytes, offset) {
+  // 2025版 表格17: 燃料电池发动机及车载氢系统数据 (12 bytes)
+  var items = [];
+  var pos = offset;
+  var dcdc = bytes[pos]; items.push({name:'DC/DC状态', value:hex8(dcdc), hex:hx(dcdc,1), desc:statusDesc(dcdc,{'0x01':'工作','0x02':'断开'})}); pos++;
+  var fcStatus = bytes[pos]; items.push({name:'燃料电池状态', value:hex8(fcStatus), hex:hx(fcStatus,1), desc: fcStatus===0x01?'运行':fcStatus===0x02?'停止':''}); pos++;
+  var h2Remain = bytes[pos]; items.push({name:'剩余氢量', value:h2Remain, unit:'%', hex:hx(h2Remain,1), desc: h2Remain<=100 ? h2Remain+'%' : '无效'}); pos++;
+  var h2MaxTemp = readWord(bytes, pos, true); items.push({name:'氢系统最高温度', value:h2MaxTemp, unit:'0.1℃', hex:hx(h2MaxTemp,2), desc:(h2MaxTemp/10-40).toFixed(1)+'℃'}); pos+=2;
+  var h2MaxTempSensor = bytes[pos]; items.push({name:'最高温度探针号', value:h2MaxTempSensor, hex:hx(h2MaxTempSensor,1)}); pos++;
+  var h2MaxConc = readWord(bytes, pos, true); items.push({name:'氢气最高浓度', value:h2MaxConc, unit:'ppm', hex:hx(h2MaxConc,2), desc:(h2MaxConc/10000*100).toFixed(4)+'%'}); pos+=2;
+  var h2MaxConcSensor = bytes[pos]; items.push({name:'最高浓度传感器号', value:h2MaxConcSensor, hex:hx(h2MaxConcSensor,1)}); pos++;
+  var h2MaxPres = readWord(bytes, pos, true); items.push({name:'氢气最高压力', value:h2MaxPres, unit:'0.1MPa', hex:hx(h2MaxPres,2), desc:(h2MaxPres/10).toFixed(1)+'MPa'}); pos+=2;
+  var h2MaxPresSensor = bytes[pos]; items.push({name:'最高压力传感器号', value:h2MaxPresSensor, hex:hx(h2MaxPresSensor,1)}); pos++;
+  return {items:items, nextOffset:pos};
+}
+function parseEngineData(bytes, offset) {
+  var items = [];
+  var rpm = readWord(bytes, offset, true);
+  items.push({name:'曲轴转速', value:rpm, unit:'r/min', hex:hx(rpm,2), desc: rpm===0xFFFE?'异常':rpm===0xFFFF?'无效':rpm+'r/min'});
+  return {items:items, nextOffset:offset+2};
+}
+function parseLocationData(bytes, offset) {
+  // 2025版车辆位置数据: 定位状态/坐标系/经度/纬度 = 9 bytes per system
+  var items = [];
+  var locCount = bytes[offset];
+  items.push({name:'位置数据数量', value:locCount, hex:hx(locCount,1)});
+  var pos = offset + 1;
+  for (var i = 0; i < locCount && pos + 9 <= bytes.length; i++) {
+    var locItems = [];
+    var ls = bytes[pos];
+    var valid = (ls & 1) ? '无效' : '有效';
+    var latH = (ls & 2) ? '南纬' : '北纬';
+    var lngH = (ls & 4) ? '西经' : '东经';
+    var coordSys = (ls & 8) ? 'GCJ-02' : 'WGS-84';
+    locItems.push({name:'定位状态', value:hex8(ls), hex:hx(ls,1), desc:valid});
+    locItems.push({name:'坐标系', value:coordSys, hex:''});
+    locItems.push({name:'纬度方向', value:latH, hex:''});
+    locItems.push({name:'经度方向', value:lngH, hex:''}); pos++;
+    var lng = readDWord(bytes, pos, true);
+    locItems.push({name:'经度', value:lng, unit:'°', hex:hx(lng,4), desc:(lng/1e6).toFixed(6)+'° '+lngH}); pos+=4;
+    var lat = readDWord(bytes, pos, true);
+    locItems.push({name:'纬度', value:lat, unit:'°', hex:hx(lat,4), desc:(lat/1e6).toFixed(6)+'° '+latH}); pos+=4;
+    items.push({name:'定位系统 #'+(i+1), subItems:locItems});
+  }
+  return {items:items, nextOffset:pos};
+}
+function parseAlarmData(bytes, offset) {
+  // 2025版 表格23/24: 故障报警数据
+  // 格式: 最高报警等级(1)+通用报警标志(4)+可充电储能装置故障总数N1(1)+故障信息列表(变长)
+  var items = [];
+  var pos = offset;
+  
+  var maxLvl = bytes[pos]; pos++;
+  var lvlDesc = ['无故障','1级-不影响车辆正常行驶','2级-影响车辆性能,需驾驶员限制行驶','3级-应立即停车处理或请求救援','4级-热事件故障,车辆即将起火自燃'];
+  items.push({name:'最高报警等级', value:maxLvl+' 级', hex:hx(maxLvl,1), desc: lvlDesc[maxLvl]||'', cls:'alert-lv'+maxLvl});
+  
+  // 通用报警标志位定义 (表格24)
+  var flagNames = [
+    '温度差异报警','电池高温报警','车载储能过压','车载储能欠压',
+    'SOC低报警','单体电池过压','单体电池欠压','SOC过高报警',
+    'SOC跳变报警','可充电储能不匹配','单体电池极差报警','绝缘电阻低报警',
+    'DC-DC温度报警','DC-DC状态报警','驱动电机控制器温度','驱动电机温度报警',
+    '车载储能过充','车载储能过放','氢系统高温','氢系统高压',
+    '氢系统高浓度','氢系统泄漏','燃料电池异常停机','燃料电池欠压',
+    '超级电容过压','超级电容欠压','超级电容高温','电机超速报警'
+  ];
+  
+  var flagsHex = bytesToHex(bytes.slice(pos, pos+4), ' ');
+  var alarmFlags = [];
+  var flagsDword = readDWord(bytes, pos, true);
+  for (var i = 0; i < 4; i++) {
+    for (var bit = 0; bit < 8; bit++) {
+      var idx = i * 8 + bit;
+      if (idx < flagNames.length && ((bytes[pos+i] >> bit) & 1)) {
+        alarmFlags.push({flag:flagNames[idx], bit:idx});
+      }
+    }
+  }
+  items.push({name:'通用报警标志', value:flagsHex, hex:flagsHex, desc: alarmFlags.length > 0 ? alarmFlags.map(function(f){return '位'+f.bit+'='+f.flag;}).join('; ') : '无报警'});
+  pos += 4;
+  
+  var faultCount = bytes[pos]; pos++;
+  items.push({name:'可充电储能装置故障总数', value:faultCount, hex:hx(faultCount,1), desc: faultCount===0xFE?'异常':faultCount===0xFF?'无效':faultCount+' 个故障'});
+  
+  // 扫描下个已知信息类型确定报警数据边界
+  var alarmEnd = pos;
+  var nextTypes = [0x07, 0x08, 0x30, 0x31, 0x32, 0xFF];
+  for (var k = alarmEnd; k < bytes.length; k++) {
+    if (nextTypes.indexOf(bytes[k]) >= 0) { alarmEnd = k; break; }
+  }
+  if (alarmEnd <= pos) alarmEnd = bytes.length;
+  
+  // 解析故障信息列表 (每个故障: 故障信息类型(1)+故障码(4)+故障数据(4)=9字节)
+  if (alarmEnd > pos) {
+    var faultIdx = 0;
+    while (pos + 5 <= alarmEnd) {
+      var faultType = bytes[pos];
+      var ftName = faultType===0x01?'驱动电机故障':faultType===0x02?'可充电储能装置故障':faultType===0x03?'燃料电池故障':faultType===0x04?'超级电容故障':faultType===0x05?'DC-DC故障':('故障类型0x'+faultType.toString(16));
+      var faultItems = [];
+      faultItems.push({name:'故障信息类型', value:ftName, hex:hx(faultType,1)}); pos++;
+      
+      var faultCode = readDWord(bytes, pos, true);
+      faultItems.push({name:'故障码', value:'0x'+faultCode.toString(16).toUpperCase(), hex:hx(faultCode,4)}); pos+=4;
+      
+      if (pos + 4 <= alarmEnd) {
+        var faultData = readDWord(bytes, pos, true);
+        faultItems.push({name:'故障数据', value:faultData, hex:hx(faultData,4), desc:'0x'+faultData.toString(16).toUpperCase()}); pos+=4;
+      } else if (pos < alarmEnd) {
+        // 剩余不足4字节: 显示为WORD
+        var rem = bytes.slice(pos, alarmEnd);
+        faultItems.push({name:'附加数据', value:bytesToHex(rem,' '), hex:bytesToHex(rem,' '), desc:rem.length+' 字节'}); pos = alarmEnd;
+      }
+      faultIdx++;
+      items.push({name:'故障信息 #'+faultIdx, subItems:faultItems});
+    }
+    // 剩余字节
+    if (pos < alarmEnd) {
+      var remaining = bytes.slice(pos, alarmEnd);
+      items.push({name:'剩余报警数据', value:bytesToHex(remaining,' '), hex:bytesToHex(remaining,' '), desc:remaining.length+' 字节(原始)'});
+      pos = alarmEnd;
+    }
+  }
+  
+  return {items:items, nextOffset:pos};
+}
+function parseBatteryVoltage(bytes, offset) {
+  // 2025版 表格11/12: 动力蓄电池最小并联单元电压数据
+  // 格式: 电池包个数(1) + [包号(1)+包电压(2)+包电流(2)+单元总数(2)+单元电压(2×N)]
+  var items = [];
+  var packCount = bytes[offset];
+  items.push({name:'动力蓄电池包个数', value:packCount, hex:hx(packCount,1), desc:packCount===0xFE?'异常':packCount===0xFF?'无效':packCount+' 个'});
+  var pos = offset + 1;
+  for (var p = 0; p < packCount && pos + 7 <= bytes.length; p++) {
+    var packItems = [];
+    var packNo = bytes[pos]; packItems.push({name:'电池包号', value:packNo, hex:hx(packNo,1)}); pos++;
+    var packVolt = readWord(bytes, pos, true); packItems.push({name:'电池包电压', value:packVolt, unit:'0.1V', hex:hx(packVolt,2), desc:(packVolt/10).toFixed(1)+'V'}); pos+=2;
+    var packCurr = readWord(bytes, pos, true); var pcDesc = packCurr<=60000?((packCurr-30000)/10).toFixed(1)+'A':'无效';
+    packItems.push({name:'电池包电流', value:packCurr, unit:'0.1A', hex:hx(packCurr,2), desc:pcDesc}); pos+=2;
+    var cellCount = readWord(bytes, pos, true); packItems.push({name:'最小并联单元总数', value:cellCount, hex:hx(cellCount,2)}); pos+=2;
+    var cellVolts = [];
+    var shown = 0;
+    for (var c = 0; c < cellCount && pos + 2 <= bytes.length && c < 30; c++) {
+      var cv = readWord(bytes, pos, true);
+      cellVolts.push({name:'单元#'+(c+1), value:cv, unit:'mV', hex:hx(cv,2), desc:(cv/1000).toFixed(3)+'V'});
+      pos += 2; shown = c + 1;
+    }
+    packItems.push({name:'最小并联单元电压', subItems:cellVolts});
+    if (shown < cellCount) { pos += (cellCount - shown) * 2; }
+    items.push({name:'电池包 #'+packNo, subItems:packItems});
+  }
+  return {items:items, nextOffset:pos};
+}
+function parseBatteryTemp(bytes, offset) {
+  // 2025版: 动力蓄电池温度数据
+  // 格式: 电池包个数(1) + [包号(1)+探针总数(2)+探针温度(1×N)]
+  var items = [];
+  var packCount = bytes[offset];
+  items.push({name:'动力蓄电池包个数', value:packCount, hex:hx(packCount,1), desc:packCount===0xFE?'异常':packCount===0xFF?'无效':packCount+' 个'});
+  var pos = offset + 1;
+  for (var p = 0; p < packCount && pos + 3 <= bytes.length; p++) {
+    var packItems = [];
+    var packNo = bytes[pos]; packItems.push({name:'电池包号', value:packNo, hex:hx(packNo,1)}); pos++;
+    var probeCount = readWord(bytes, pos, true); packItems.push({name:'温度探针总数', value:probeCount, hex:hx(probeCount,2)}); pos+=2;
+    var temps = [];
+    var shown = 0;
+    for (var c = 0; c < probeCount && pos < bytes.length && c < 30; c++) {
+      var tv = bytes[pos];
+      temps.push({name:'探针#'+(c+1), value:tv, unit:'℃', hex:hx(tv,1), desc: tv<=0xFA ? (tv-40)+'℃' : tv===0xFE?'异常':'无效'});
+      pos++; shown = c + 1;
+    }
+    packItems.push({name:'探针温度', subItems:temps});
+    if (shown < probeCount) { pos += (probeCount - shown); }
+    items.push({name:'电池包 #'+packNo, subItems:packItems});
+  }
+  return {items:items, nextOffset:pos};
+}
+function parseFuelCellStackData(bytes, offset) {
+  // 2025版 表格18: 燃料电池堆数据
+  // 格式: 电堆个数(1) + [电堆序号(1)+氢气入口压力(2)+空气入口压力(2)+氢气出口压力(2)+空气出口压力(2)+空气入口温度(1)+冷却液出口温度(1)+电堆输出电流(2)+电堆输出电压(2)]
+  var items = [];
+  var stackCount = bytes[offset];
+  items.push({name:'燃料电池电堆个数', value:stackCount, hex:hx(stackCount,1)});
+  var pos = offset + 1;
+  for (var i = 0; i < stackCount && pos + 15 <= bytes.length; i++) {
+    var stackItems = [];
+    var sn = bytes[pos]; stackItems.push({name:'电堆序号', value:sn, hex:hx(sn,1)}); pos++;
+    var h2InPres = readWord(bytes, pos, true); stackItems.push({name:'氢气入口压力', value:h2InPres, unit:'kPa', hex:hx(h2InPres,2), desc:h2InPres+' kPa'}); pos+=2;
+    var airInPres = readWord(bytes, pos, true); stackItems.push({name:'空气入口压力', value:airInPres, unit:'kPa', hex:hx(airInPres,2), desc:airInPres+' kPa'}); pos+=2;
+    var h2OutPres = readWord(bytes, pos, true); stackItems.push({name:'氢气出口压力', value:h2OutPres, unit:'kPa', hex:hx(h2OutPres,2), desc:h2OutPres+' kPa'}); pos+=2;
+    var airOutPres = readWord(bytes, pos, true); stackItems.push({name:'空气出口压力', value:airOutPres, unit:'kPa', hex:hx(airOutPres,2), desc:airOutPres+' kPa'}); pos+=2;
+    var airInTemp = bytes[pos]; stackItems.push({name:'空气入口温度', value:airInTemp, unit:'℃', hex:hx(airInTemp,1), desc: airInTemp<=0xFA ? (airInTemp-40)+'℃' : '无效'}); pos++;
+    var coolOutTemp = bytes[pos]; stackItems.push({name:'冷却液出口温度', value:coolOutTemp, unit:'℃', hex:hx(coolOutTemp,1), desc: coolOutTemp<=0xFA ? (coolOutTemp-40)+'℃' : '无效'}); pos++;
+    var stackCurr = readWord(bytes, pos, true); stackItems.push({name:'电堆输出电流', value:stackCurr, unit:'0.1A', hex:hx(stackCurr,2), desc:(stackCurr/10).toFixed(1)+'A'}); pos+=2;
+    var stackVolt = readWord(bytes, pos, true); stackItems.push({name:'电堆输出电压', value:stackVolt, unit:'0.1V', hex:hx(stackVolt,2), desc:(stackVolt/10).toFixed(1)+'V'}); pos+=2;
+    items.push({name:'电堆 #'+sn, subItems:stackItems});
+  }
+  return {items:items, nextOffset:pos};
+}
+
+function parseSuperCapData(bytes, offset) {
+  // 2025版 0x31 超级电容数据
+  var items = [];
+  var pos = offset;
+  var mgrNo = bytes[pos]; items.push({name:'管理系统号', value:mgrNo, hex:hx(mgrNo,1)}); pos++;
+  var tv = readWord(bytes, pos, true); items.push({name:'总电压', value:tv, unit:'0.1V', hex:hx(tv,2), desc:(tv/10).toFixed(1)+'V'}); pos+=2;
+  var ti = readWord(bytes, pos, true); items.push({name:'总电流', value:ti, unit:'0.1A', hex:hx(ti,2), desc:((ti-30000)/10).toFixed(1)+'A'}); pos+=2;
+  var cc = readWord(bytes, pos, true); items.push({name:'单体总数', value:cc, hex:hx(cc,2)}); pos+=2;
+  var cellVolts = []; var shown = 0;
+  for (var c = 0; c < cc && c < 30 && pos + 2 <= bytes.length; c++) {
+    var cv = readWord(bytes, pos, true);
+    cellVolts.push({name:'单体#'+(c+1), value:cv, unit:'mV', hex:hx(cv,2), desc:(cv/1000).toFixed(3)+'V'});
+    pos += 2; shown = c + 1;
+  }
+  if (shown < cc) { pos += (cc-shown)*2; }
+  items.push({name:'单体电压', subItems:cellVolts});
+  if (shown < cc) items.push({name:'...(更多)', value:'共 '+cc+' 个单体'});
+  var pc = readWord(bytes, pos, true); pos+=2;
+  items.push({name:'温度探针总数', value:pc, hex:hx(pc,2)});
+  var temps = [];
+  for (var d = 0; d < pc && d < 30 && pos < bytes.length; d++) {
+    temps.push({name:'探针#'+(d+1), value:(bytes[pos]-40), unit:'℃', hex:hx(bytes[pos],1)}); pos++;
+  }
+  if (pc > 30) pos += (pc-30);
+  items.push({name:'探针温度', subItems:temps});
+  return {items:items, nextOffset:pos};
+}
+function parseSuperCapExtremeData(bytes, offset) {
+  // 2025版 表格26: 超级电容器极值数据 (18 bytes)
+  var items = [];
+  var o = offset;
+  var v;
+  items.push({name:'最高电压管理系统号', value:bytes[o], hex:hx(bytes[o],1)}); o++;
+  v = readWord(bytes,o,true); items.push({name:'最高电压单体代号', value:v, hex:hx(v,2)}); o+=2;
+  v = readWord(bytes,o,true); items.push({name:'最高电压值', value:v, unit:'mV', hex:hx(v,2), desc:(v/1000).toFixed(3)+'V'}); o+=2;
+  items.push({name:'最低电压管理系统号', value:bytes[o], hex:hx(bytes[o],1)}); o++;
+  v = readWord(bytes,o,true); items.push({name:'最低电压单体代号', value:v, hex:hx(v,2)}); o+=2;
+  v = readWord(bytes,o,true); items.push({name:'最低电压值', value:v, unit:'mV', hex:hx(v,2), desc:(v/1000).toFixed(3)+'V'}); o+=2;
+  items.push({name:'最高温度管理系统号', value:bytes[o], hex:hx(bytes[o],1)}); o++;
+  v = readWord(bytes,o,true); items.push({name:'最高温度探针代号', value:v, hex:hx(v,2)}); o+=2;
+  v = bytes[o]; items.push({name:'最高温度值', value:v<=0xFA?(v-40):v, unit:'℃', hex:hx(v,1), desc:v<=0xFA?(v-40)+'℃':'无效'}); o++;
+  items.push({name:'最低温度管理系统号', value:bytes[o], hex:hx(bytes[o],1)}); o++;
+  v = readWord(bytes,o,true); items.push({name:'最低温度探针代号', value:v, hex:hx(v,2)}); o+=2;
+  v = bytes[o]; items.push({name:'最低温度值', value:v<=0xFA?(v-40):v, unit:'℃', hex:hx(v,1), desc:v<=0xFA?(v-40)+'℃':'无效'}); o++;
+  return {items:items, nextOffset:o};
+}
+function parseActivationInfo(result) {
+  // 2025版 表B.3.5.5: 激活信息数据格式
+  // 格式: 时间(6)+芯片ID(16)+公钥长度(2)+公钥(N)+VIN(17)+签名信息(表8)
+  var bytes = result.dataBytes;
+  if (bytes.length < 6) { result.error = '激活信息数据长度不足'; return; }
+  var time = getTimeStr(bytes, 0);
+  result.fields.push({name:'数据采集时间', value:time, hex:bytesToHex(bytes.slice(0,6), ' ')});
+  var pos = 6;
+  if (pos + 16 <= bytes.length) {
+    var chipId = '';
+    for (var i = pos; i < pos + 16; i++) { chipId += String.fromCharCode(bytes[i]); }
+    result.fields.push({name:'芯片ID', value:chipId.trim(), hex:bytesToHex(bytes.slice(pos, pos+16), ' ')});
+    pos += 16;
+  }
+  if (pos + 2 <= bytes.length) {
+    var pubKeyLen = readWord(bytes, pos, true);
+    result.fields.push({name:'公钥长度', value:pubKeyLen+' 字节', hex:hx(pubKeyLen,2)});
+    pos += 2;
+    if (pos + pubKeyLen <= bytes.length) {
+      var pubKey = '';
+      for (var pi = pos; pi < pos + pubKeyLen; pi++) { pubKey += String.fromCharCode(bytes[pi]); }
+      var pkDisplay = pubKey.length > 80 ? pubKey.slice(0,80)+'...' : pubKey;
+      result.fields.push({name:'公钥', value:pkDisplay, hex:'', desc:'共 '+pubKeyLen+' 字节'});
+      pos += pubKeyLen;
+    } else {
+      result.fields.push({name:'公钥', value:'公钥长度异常('+pubKeyLen+')', desc:'数据不足'});
+    }
+  }
+  if (pos + 17 <= bytes.length) {
+    var vin = '';
+    for (var vi = pos; vi < pos + 17; vi++) { vin += String.fromCharCode(bytes[vi]); }
+    result.fields.push({name:'车辆识别代号(VIN)', value:vin, hex:bytesToHex(bytes.slice(pos, pos+17), ' ')});
+    pos += 17;
+  }
+  // 签名信息按表8: 签名类型(1)+R值长度(2)+R值(N)+S值长度(2)+S值(N)
+  if (pos + 1 <= bytes.length) {
+    var sigType = bytes[pos]; pos++;
+    var sigTypeName = sigType===0x01?'RSA':sigType===0x02?'SM2':sigType===0x03?'ECDSA':('未知(0x'+sigType.toString(16)+')');
+    result.fields.push({name:'签名类型', value:sigTypeName, hex:hx(sigType,1)});
+    if (pos + 2 <= bytes.length) {
+      var rLen = readWord(bytes, pos, true); pos += 2;
+      result.fields.push({name:'签名R值长度', value:rLen+' 字节', hex:hx(rLen,2)});
+      if (pos + rLen <= bytes.length) {
+        var rData = bytesToHex(bytes.slice(pos, pos+rLen), ' ');
+        result.fields.push({name:'签名R值', value:rData, hex:'', desc:'共 '+rLen+' 字节'});
+        pos += rLen;
+        if (pos + 2 <= bytes.length) {
+          var sLen = readWord(bytes, pos, true); pos += 2;
+          result.fields.push({name:'签名S值长度', value:sLen+' 字节', hex:hx(sLen,2)});
+          if (pos + sLen <= bytes.length) {
+            var sData = bytesToHex(bytes.slice(pos, pos+sLen), ' ');
+            result.fields.push({name:'签名S值', value:sData, hex:'', desc:'共 '+sLen+' 字节'});
+            pos += sLen;
+          }
+        }
+      }
+    }
+  }
+}
+
+function parseActivationResult(result) {
+  // 2025版 表B.3.5.6/表B.4: 激活结果应答数据格式
+  // 格式: 激活状态(1)+信息(1)
+  var bytes = result.dataBytes;
+  if (bytes.length < 2) { result.error = '激活结果数据长度不足'; return; }
+  var status = bytes[0];
+  var statusDesc = status===0x01 ? '激活成功' : status===0x02 ? '激活失败' : ('未知(0x'+status.toString(16)+')');
+  result.fields.push({name:'激活状态', value:hex8(status), hex:hx(status,1), desc:statusDesc});
+  var info = bytes[1];
+  var infoDesc = info===0x00 ? '激活成功' : info===0x01 ? '芯片已激活' : info===0x02 ? 'VIN重复' : ('未知(0x'+info.toString(16)+')');
+  result.fields.push({name:'信息', value:hex8(info), hex:hx(info,1), desc:infoDesc});
+}
+function parseSignatureData(bytes, offset) {
+  // 表8 签名信息: 签名类型(1)+R值长度(2)+R值(N)+S值长度(2)+S值(N)
+  var items = [];
+  var pos = offset;
+  var sigType = bytes[pos]; pos++;
+  var sigTypeName = sigType===0x01?'RSA':sigType===0x02?'SM2':sigType===0x03?'ECDSA':('未知(0x'+sigType.toString(16)+')');
+  items.push({name:'签名类型', value:sigTypeName, hex:hx(sigType,1)});
+  var rLen = readWord(bytes, pos, true); pos+=2;
+  items.push({name:'签名R值长度', value:rLen+' 字节', hex:hx(rLen,2)});
+  if (pos + rLen <= bytes.length) {
+    var rData = bytesToHex(bytes.slice(pos, pos+rLen), ' ');
+    items.push({name:'签名R值', value:rData, hex:'', desc:'共 '+rLen+' 字节'});
+    pos += rLen;
+  }
+  if (pos + 2 <= bytes.length) {
+    var sLen = readWord(bytes, pos, true); pos+=2;
+    items.push({name:'签名S值长度', value:sLen+' 字节', hex:hx(sLen,2)});
+    if (pos + sLen <= bytes.length) {
+      var sData = bytesToHex(bytes.slice(pos, pos+sLen), ' ');
+      items.push({name:'签名S值', value:sData, hex:'', desc:'共 '+sLen+' 字节'});
+      pos += sLen;
+    }
+  }
+  return {items:items, nextOffset:pos};
+}
+var INFO_PARSERS = {
+  0x01: parseVehicleData,
+  0x02: parseMotorData,
+  0x03: parseFuelCellData,
+  0x04: parseEngineData,
+  0x05: parseLocationData,
+  0x06: parseAlarmData,
+  0x07: parseBatteryVoltage,
+  0x08: parseBatteryTemp,
+  0x30: parseFuelCellStackData,
+  0x31: parseSuperCapData,
+  0x32: parseSuperCapExtremeData,
+  0xFF: parseSignatureData
+};
+
+function hex8(v) { return '0x' + v.toString(16).padStart(2,'0').toUpperCase(); }
+
+// ===== Frame Parser =====
+function parseFrame(bytes, startOffset) {
+  if (bytes.length - startOffset < FRAME_MIN_LEN) {
+    return {error:'数据长度不足，至少需要 '+FRAME_MIN_LEN+' 字节', offset:startOffset};
+  }
+  if (bytes[startOffset] !== START_MARKER || bytes[startOffset+1] !== START_MARKER) {
+    return {error:'起始标志错误，期望 0x24 0x24', offset:startOffset};
+  }
+  var cmd = bytes[startOffset+2];
+  if (!CMD_NAMES[cmd]) {
+    return {error:'不支持的命令标识: '+hex8(cmd), offset:startOffset};
+  }
+  var respFlag = bytes[startOffset+3];
+  var vin = '';
+  for (var i = 4; i < 21; i++) { vin += String.fromCharCode(bytes[startOffset+i]); }
+  var crypt = bytes[startOffset+21];
+  var dataLen = readWord(bytes, startOffset+22, true);
+  var dataStart = startOffset + 24;
+  var dataEnd = dataStart + dataLen;
+  if (dataEnd > bytes.length) {
+    return {error:'数据长度('+dataLen+')超过可用字节数', offset:startOffset};
+  }
+  var checksum = bytes[dataEnd];
+  var calcChk = cmd;
+  for (var j = startOffset+3; j < dataEnd; j++) { calcChk ^= bytes[j]; }
+  var chkValid = (calcChk === checksum);
+
+  var result = {
+    offset:startOffset, cmd:cmd, respFlag:respFlag, vin:vin, crypt:crypt,
+    dataLen:dataLen, dataBytes:bytes.slice(dataStart, dataEnd),
+    checksum:checksum, calcChk:calcChk, chkValid:chkValid,
+    fields:[], infoTypes:[], error:null
+  };
+
+  if (cmd === 0x01) {
+    parseLoginData(result);
+  } else if (cmd === 0x09) {
+    parseActivationInfo(result);
+  } else if (cmd === 0x0A) {
+    parseActivationResult(result);
+  } else if (cmd === 0x02 || cmd === 0x03) {
+    parseRealTimeData(result, cmd);
+  }
+  result.nextOffset = dataEnd + 1;
+  return result;
+}
+
+function parseLoginData(result) {
+  var bytes = result.dataBytes;
+  if (bytes.length < 28) { result.error = '登入数据长度不足(需>=28字节)'; return; }
+  var time = getTimeStr(bytes, 0);
+  result.fields.push({name:'数据采集时间', value:time, hex:bytesToHex(bytes.slice(0,6), ' ')});
+  var serial = readWord(bytes, 6, true);
+  result.fields.push({name:'登入流水号', value:serial, hex:hx(serial,2), desc: serial > 65531 ? '无效' : String(serial)});
+  // ICCID: 20字节定长, 流水号后直接开始
+  var iccid = '';
+  for (var i = 8; i < 28; i++) { iccid += String.fromCharCode(bytes[i]); }
+  result.fields.push({name:'ICCID', value:iccid.trim(), hex:bytesToHex(bytes.slice(8, 28), ' ')});
+  var pos = 28;
+  if (pos < bytes.length) {
+    var bmsCount = bytes[pos]; pos++;
+    result.fields.push({name:'BMS个数', value:bmsCount, hex:hx(bmsCount,1), desc: bmsCount===0xFE?'异常':bmsCount===0xFF?'无效':bmsCount+'个'});
+    if (pos < bytes.length) {
+      var codeLen = bytes[pos]; pos++;
+      result.fields.push({name:'电池包编码长度', value:codeLen, hex:hx(codeLen,1)});
+      for (var j = 0; j < bmsCount && pos + codeLen <= bytes.length; j++) {
+        var code = '';
+        for (var k = pos; k < pos + codeLen; k++) { code += String.fromCharCode(bytes[k]); }
+        result.fields.push({name:'电池包编码 #'+(j+1), value:code, hex:bytesToHex(bytes.slice(pos, pos+codeLen), ' ')});
+        pos += codeLen;
+      }
+    }
+  }
+}
+
+function parseRealTimeData(result, cmd) {
+  var bytes = result.dataBytes;
+  if (bytes.length < 7) { result.error = '实时/补发数据长度不足'; return; }
+  var time = getTimeStr(bytes, 0);
+  result.fields.push({name:'数据采集时间', value:time, hex:bytesToHex(bytes.slice(0,6), ' ')});
+  var pos = 6;
+  while (pos < bytes.length) {
+    var infoType = bytes[pos];
+    if (infoType === 0xFF) {
+      var parsed = parseSignatureData(bytes, pos + 1);
+      result.infoTypes.push({type:0xFF, name:INFO_TYPES[0xFF], items:parsed.items, byteRange:[pos+1, parsed.nextOffset-1]});
+      pos = parsed.nextOffset;
+      break;
+    }
+    var parser = INFO_PARSERS[infoType];
+    if (!parser) {
+      // Unknown type: show remaining raw bytes and continue to next type if possible
+      var rawBytes = bytes.slice(pos + 1);
+      result.infoTypes.push({type:infoType, name:'未知类型('+hex8(infoType)+')', items:[
+        {name:'原始数据', value:bytesToHex(rawBytes, ' '), desc:rawBytes.length+' 字节'}
+      ], byteRange:[pos+1, bytes.length-1]});
+      pos = bytes.length; // consume rest
+      break;
+    }
+    var parsed = parser(bytes, pos + 1);
+    result.infoTypes.push({type:infoType, name:INFO_TYPES[infoType] || ('类型'+hex8(infoType)), items:parsed.items, byteRange:[pos+1, parsed.nextOffset-1]});
+    pos = parsed.nextOffset;
+  }
+}
+
+// ===== Main Parse Entry =====
+function parseAll() {
+  try {
+    var raw = g('hexInput').value;
+    if (!raw.trim()) { setStatus('请输入数据', 'err'); return; }
+    var hex = cleanHex(raw);
+    if (hex.length < FRAME_MIN_LEN * 2) { setStatus('数据长度不足: 需要至少'+ (FRAME_MIN_LEN*2) +'个hex字符', 'err'); return; }
+    var bytes = hexToBytes(hex);
+    parseResults = [];
+    var offset = 0;
+    var errors = [];
+    while (offset < bytes.length - 1) {
+      while (offset < bytes.length - 1 && !(bytes[offset] === START_MARKER && bytes[offset+1] === START_MARKER)) {
+        offset++;
+      }
+      if (offset >= bytes.length - 1) break;
+      var result = parseFrame(bytes, offset);
+      if (result.error) {
+        errors.push(result.error);
+        offset += 2;
+        continue;
+      }
+      parseResults.push(result);
+      offset = result.nextOffset;
+    }
+    renderResults();
+    if (parseResults.length > 0) {
+      setStatus('成功解析 '+parseResults.length+' 条报文', 'ok');
+    } else {
+      setStatus('未找到有效报文: '+errors.join('; '), 'err');
+    }
+  } catch(e) {
+    setStatus('JS错误: '+e.message, 'err');
+    var container = g('tabParsed');
+    container.innerHTML = '<div class="error-msg">解析出错: '+esc(e.message)+'<br>行号: '+e.lineNumber+'<br>'+esc(e.stack||'')+'</div>';
+  }
+}
+
+// ===== Render =====
+function renderResults() {
+  var container = g('tabParsed');
+  var rawDiv = g('tabRaw');
+  if (parseResults.length === 0) {
+    container.innerHTML = '<div class="error-msg">未找到有效报文数据</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < parseResults.length; i++) {
+    html += renderMessage(parseResults[i], i);
+  }
+  container.innerHTML = html || '<div class="error-msg">解析无结果</div>';
+
+  // Raw data tab
+  var rawHtml = '<div style="padding:8px;">';
+  rawHtml += '<table class="data-table open" style="font-size:0.78em;">';
+  rawHtml += '<tr><th>#</th><th>偏移</th><th>十六进制</th><th>说明</th></tr>';
+  for (var j = 0; j < parseResults.length; j++) {
+    var r = parseResults[j];
+    var hx = bytesToHex(r.dataBytes, ' ');
+    if (hx.length > 150) hx = hx.slice(0, 150) + '...';
+    rawHtml += '<tr><td>'+(j+1)+'</td><td>0x'+r.offset.toString(16).toUpperCase()+'</td><td style="font-family:monospace;font-size:0.75em;">'+hx+'</td><td>'+
+      CMD_NAMES[r.cmd]+' | '+esc(r.vin)+' | '+r.dataLen+'字节</td></tr>';
+  }
+  rawHtml += '</table></div>';
+  rawDiv.innerHTML = rawHtml;
+}
+
+function renderInfoItems(items) {
+  var h = '';
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    if (item.subItems) {
+      h += '<tr><td colspan="4" style="padding:4px 24px;color:#d2a8ff;font-weight:bold;">▶ '+esc(item.name)+'</td></tr>';
+      h += renderInfoItems(item.subItems);
+    } else {
+      var valHtml = '';
+      if (item.cls) {
+        valHtml = '<span class="'+item.cls+'">'+item.value+'</span>';
+      } else {
+        valHtml = item.value !== undefined ? item.value : '';
+      }
+      var hexHtml = item.hex ? '<span style="color:#666;font-family:monospace;font-size:0.78em;">'+item.hex+'</span>' : '';
+      h += '<tr>'+
+        '<td class="field-name" style="padding-left:24px;">'+esc(item.name)+'</td>'+
+        '<td class="field-val">'+valHtml+(item.unit ? ' <span style="color:#888;">'+item.unit+'</span>' : '')+'</td>'+
+        '<td class="field-unit">'+(item.desc || '')+'</td>'+
+        '<td class="field-hex">'+hexHtml+'</td>'+
+        '</tr>';
+    }
+  }
+  return h;
+}
+function renderMessage(r, idx) {
+  var badgeCls = CMD_BADGE_CLASS[r.cmd] || '';
+  var html = '<div class="msg-card">';
+  html += '<div class="msg-header" onclick="toggleMsg(this)">';
+  html += '<span class="cmd-badge '+badgeCls+'">'+hex8(r.cmd)+' '+CMD_NAMES[r.cmd]+'</span>';
+  html += '<span class="vin">VIN: '+esc(r.vin)+'</span>';
+  html += '<span style="color:#888;font-size:0.8em;">数据: '+r.dataLen+' 字节</span>';
+  html += '<span style="color:'+(r.chkValid?'#3fb950':'#e94560')+';font-size:0.8em;">校验: '+(r.chkValid?'通过':'失败')+'</span>';
+  html += '<span class="arrow">▶</span>';
+  html += '</div>';
+  html += '<div class="msg-body">';
+
+  // Frame info table
+  html += '<table class="frame-table">';
+  html += '<tr><td class="lbl">起始标志</td><td class="val">0x24 0x24 ($$)</td></tr>';
+  html += '<tr><td class="lbl">命令标识</td><td class="val">'+hex8(r.cmd)+' — '+CMD_NAMES[r.cmd]+'</td></tr>';
+  html += '<tr><td class="lbl">应答标志</td><td class="val">'+hex8(r.respFlag)+' — '+(RESP_FLAGS[r.respFlag]||'未知')+'</td></tr>';
+  html += '<tr><td class="lbl">车辆VIN</td><td class="val">'+esc(r.vin)+'</td></tr>';
+  html += '<tr><td class="lbl">加密方式</td><td class="val">'+hex8(r.crypt)+' — '+(CRYPT_NAMES[r.crypt]||'未知')+'</td></tr>';
+  html += '<tr><td class="lbl">数据长度</td><td class="val">'+r.dataLen+' 字节 (0x'+r.dataLen.toString(16).padStart(4,'0').toUpperCase()+')</td></tr>';
+  html += '<tr><td class="lbl">校验码</td><td class="val">';
+  html += '0x'+r.checksum.toString(16).padStart(2,'0').toUpperCase();
+  html += ' (计算: 0x'+r.calcChk.toString(16).padStart(2,'0').toUpperCase()+') ';
+  html += '<span style="color:'+(r.chkValid?'#3fb950':'#e94560')+'">'+(r.chkValid?'✓ 通过':'✗ 失败')+'</span>';
+  html += '</td></tr>';
+  var dataHex = bytesToHex(r.dataBytes, ' ');
+  html += '<tr><td class="lbl">原始数据</td><td class="val" style="font-size:0.75em;word-break:break-all;">'+(dataHex.length > 500 ? dataHex.slice(0,500)+'...' : dataHex)+' ('+r.dataBytes.length+'字节)</td></tr>';
+  html += '</table>';
+
+  if (r.error) {
+    html += '<div class="error-msg">解析错误: '+esc(r.error)+'</div>';
+  }
+
+  // Frame fields
+  if (r.fields.length > 0) {
+    html += '<div class="section-title" onclick="toggleSection(this)"><span class="toggle">▶</span> 命令数据 ('+CMD_NAMES[r.cmd]+')</div>';
+    html += '<table class="data-table">';
+    html += '<tr><th style="width:35%">数据项</th><th style="width:20%">值</th><th style="width:25%">说明</th><th style="width:20%">原始HEX</th></tr>';
+    for (var i = 0; i < r.fields.length; i++) {
+      var f = r.fields[i];
+      html += '<tr><td class="field-name">'+esc(f.name)+'</td><td class="field-val">'+f.value+'</td><td class="field-unit">'+(f.desc||'')+'</td><td class="field-hex">'+(f.hex||'')+'</td></tr>';
+    }
+    html += '</table>';
+  }
+
+  // Info types
+  if (r.infoTypes.length > 0) {
+    html += '<div class="section-title" onclick="toggleSection(this)"><span class="toggle">▶</span> 信息类型 ('+r.infoTypes.length+' 种)</div>';
+    html += '<table class="data-table">';
+    html += '<tr><th style="width:32%">数据项</th><th style="width:18%">值</th><th style="width:32%">说明</th><th style="width:18%">原始HEX</th></tr>';
+    for (var j = 0; j < r.infoTypes.length; j++) {
+      var it = r.infoTypes[j];
+      var th = '0x'+it.type.toString(16).padStart(2,'0').toUpperCase();
+      var tc = 'type-'+th;
+      html += '<tr style="background:#0d1117;"><td colspan="4" style="padding:8px 12px;color:#e0e0e0;font-weight:bold;">';
+      html += '<span class="type-badge '+tc+'">'+th+'</span> '+esc(it.name);
+      var rangeStart = it.byteRange[0], rangeEnd = it.byteRange[1], rangeLen = rangeEnd - rangeStart + 1;
+      var rangeHex = bytesToHex(r.dataBytes.slice(rangeStart, rangeEnd + 1), ' ');
+      html += '<span style="color:#666;font-size:0.8em;font-weight:normal;"> [字节 '+rangeStart+'-'+rangeEnd+' ('+rangeLen+'字节)]</span>';
+      if (it.error) html += '<span style="color:#e94560;"> ⚠ '+esc(it.error)+'</span>';
+      html += '</td></tr>';
+      if (rangeLen > 0) {
+        html += '<tr style="background:#0a0a15;"><td colspan="4" style="padding:2px 12px;color:#666;font-size:0.7em;font-family:monospace;">HEX: '+rangeHex+'</td></tr>';
+      }
+      html += renderInfoItems(it.items);
+    }
+    html += '</table>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function toggleMsg(header) {
+  var body = header.nextElementSibling;
+  var arrow = header.querySelector('.arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+  if (body.classList.contains('open')) {
+    var tables = body.querySelectorAll('.data-table');
+    for (var i = 0; i < tables.length; i++) { tables[i].classList.add('open'); }
+  }
+}
+
+function toggleSection(section) {
+  var toggle = section.querySelector('.toggle');
+  var table = section.nextElementSibling;
+  table.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+// ===== Export =====
+function exportJSON() {
+  var out = [];
+  for (var i = 0; i < parseResults.length; i++) {
+    var r = parseResults[i];
+    out.push({
+      index: i+1,
+      cmd: '0x'+r.cmd.toString(16).padStart(2,'0'),
+      cmdName: CMD_NAMES[r.cmd],
+      vin: r.vin,
+      respFlag: '0x'+r.respFlag.toString(16).padStart(2,'0'),
+      encryption: '0x'+r.crypt.toString(16).padStart(2,'0'),
+      dataLength: r.dataLen,
+      checksumValid: r.chkValid,
+      fields: r.fields,
+      infoTypes: r.infoTypes.map(function(it){ return {type:it.type, name:it.name, byteRange:it.byteRange, items:it.items}; }),
+      rawDataHex: bytesToHex(r.dataBytes)
+    });
+  }
+  var json = JSON.stringify(out, null, 2);
+  downloadFile('protocol_parsed.json', json, 'application/json');
+}
+
+function exportCSV() {
+  var csv = '报文序号,命令标识,命令名称,VIN,数据长度,校验结果\n';
+  for (var i = 0; i < parseResults.length; i++) {
+    var r = parseResults[i];
+    csv += (i+1)+',0x'+r.cmd.toString(16).padStart(2,'0')+','+CMD_NAMES[r.cmd]+','+r.vin+','+r.dataLen+','+(r.chkValid?'通过':'失败')+'\n';
+    for (var j = 0; j < r.infoTypes.length; j++) {
+      var it = r.infoTypes[j];
+      csv += ',,信息类型,0x'+it.type.toString(16).padStart(2,'0')+','+it.name+',,\n';
+      var flat = flattenItems(it.items);
+      for (var k = 0; k < flat.length; k++) {
+        var fi = flat[k];
+        csv += ',,,,'+fi.name+','+(fi.value||'')+','+(fi.unit||'')+','+(fi.desc||'')+'\n';
+      }
+    }
+  }
+  downloadFile('protocol_parsed.csv', csv, 'text/csv;charset=utf-8');
+}
+
+function flattenItems(items, result) {
+  result = result || [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    if (item.subItems) {
+      result.push({name:item.name, value:'', unit:'', desc:''});
+      flattenItems(item.subItems, result);
+    } else {
+      result.push({name:item.name, value:item.value, unit:item.unit||'', desc:item.desc||''});
+    }
+  }
+  return result;
+}
+
+function copyResult() {
+  var text = JSON.stringify(parseResults.map(function(r){ return {
+    cmd: CMD_NAMES[r.cmd], vin: r.vin, dataLen: r.dataLen, checksum: r.chkValid,
+    fields: r.fields, infoTypes: r.infoTypes.map(function(it){ return {type:it.name, items:flattenItems(it.items)}; })
+  };}), null, 2);
+  navigator.clipboard.writeText(text).then(function(){
+    setStatus('已复制到剪贴板', 'ok');
+  }, function(){
+    setStatus('复制失败，请手动复制', 'err');
+  });
+}
+
+function downloadFile(filename, content, mime) {
+  var blob = new Blob([content], {type:mime});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAll() {
+  g('hexInput').value = '';
+  parseResults = [];
+  g('tabParsed').innerHTML = '<div style="color:#666;text-align:center;padding:60px;font-size:0.9em;">数据已清空</div>';
+  g('tabRaw').innerHTML = '';
+  setStatus('等待输入', '');
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    g('hexInput').addEventListener('input', updateStats);
+    updateStats();
+    setStatus('就绪', 'ok');
+    // Quick self-test
+    var testHex = cleanHex('242402FE544553543332393630303030303030303101000000');
+    if (testHex.length >= FRAME_MIN_LEN * 2) {
+      var testBytes = hexToBytes(testHex);
+      if (testBytes.length >= FRAME_MIN_LEN) {
+        setStatus('就绪 — 脚本加载正常', 'ok');
+      }
+    }
+  } catch(e) {
+    setStatus('初始化错误: '+e.message, 'err');
+  }
+});
+</script>
+</body>
+</html>
